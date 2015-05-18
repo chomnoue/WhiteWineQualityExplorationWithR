@@ -1,0 +1,561 @@
+---
+title: "White wine quality exploration by Chomnoue Nghemning Alain-Michel"
+---
+
+## Which chemical properties influence the quality of white wines?
+
+
+
+```{r packages}
+library(ggplot2)
+library(GGally)
+library(memisc)
+library(gridExtra)
+theme_set(theme_classic(12))
+```
+
+
+# Analysis
+
+### Load the Data
+
+```{r Load_the_Data}
+#I ignore the first (no name) column of the csv file
+#it is used just to number the lines in the file, so it is useless for the analysis
+wines=read.csv('wineQualityWhites.csv')[,c(2:13)]
+```
+
+### Summary of the Data Set
+```{r Summary}
+dim(wines)
+names(wines)
+str(wines)
+summary(wines)
+```
+
+##### Observations from the summary
+
+The number of variables, the number of attributes and their names correspond to the description in the wineQualityInfo.txt file.
+
+All attributes are decimals except the output variable (quality) which is of type integer. 
+
+Most of the attrbutes (except density, PH, alcohol and quality) have a Max value near twice (or greater) the third quantile.  Let us plot them to see more.
+
+### Understanding the distribution of single variables
+
+Let us explore individual variables first
+
+#### Fixed acidity
+```{r ploting fixed acidity}
+qplot(fixed.acidity, data=wines,binwidth=0.2)
+
+qplot(fixed.acidity, data=wines,binwidth=0.01)+
+  coord_cartesian(xlim=c(3,12))+
+  scale_x_continuous(breaks=seq(0,12,1))
+
+sort(table(wines$fixed.acidity),decreasing=T)
+
+```
+
+Fixed acidity seems to be normally distributed over wines, with most values between 6 and 8.
+Most of the values have a single decimal digit.
+
+#### Volatile acidity
+```{r ploting volatile acidity}
+
+qplot(volatile.acidity, data=wines,binwidth=0.02)+
+  coord_cartesian(xlim=c(0,1))+
+  scale_x_continuous(breaks=seq(0,1,.1))
+
+summary(wines$volatile.acidity)
+
+```
+
+Most wines have volatile acidity between 0.2 and 0.35
+
+#### Citric acid
+```{r ploting citric acid}
+qplot(citric.acid, data=wines,binwidth=0.05)+
+  coord_cartesian(xlim=c(0,1))+
+  scale_x_continuous(breaks=seq(0,1,.1))
+
+qplot(citric.acid, data=wines,binwidth=0.05, geom = "freqpoly")+
+  coord_cartesian(xlim=c(0,1))+
+  scale_x_continuous(breaks=seq(0,1,.1))
+
+summary(wines$citric.acid)
+
+```
+
+Most values of citric acid are  between 0.2 and 0.5, with a Median of 0.32.
+We have wines with no trace of citric acid (Min. :0.0000).
+
+#### Residual sugar
+```{r ploting residual sugar}
+qplot(residual.sugar, data=wines,binwidth=1)+
+  coord_cartesian(xlim=c(0,25))
+
+
+
+summary(wines$residual.sugar)
+
+```
+
+There are few wines with  residual sugar value less than 1. We then have a peak of values beween 1 and 2, and then the frequency decreases as  values grow up to 21. There are some outliers greater than 21.
+
+#### Chlorides
+```{r ploting chlorides}
+qplot(chlorides, data=wines,binwidth=0.002)+
+  coord_cartesian(xlim=c(0,.1))+
+  scale_x_continuous(breaks=seq(0,.1,.01))
+
+
+
+
+summary(wines$chlorides)
+
+```
+
+Chlorides values look like normally distributed with most value between 0.03 and 0.06, and a median of 0.043
+
+#### Free sulfur dioxide
+```{r ploting free sulfur dioxide}
+qplot(free.sulfur.dioxide, data=wines,binwidth=1)+
+  coord_cartesian(xlim=c(0,100))+
+  scale_x_continuous(breaks=seq(0,100,10))
+
+
+sort(table(wines$free.sulfur.dioxide),decreasing=T)
+
+summary(wines$free.sulfur.dioxide)
+
+```
+
+Distribution of Free sulfur dioxide also looks normal, with more values between 20 and 50. Also, most values are integers, non-integer values count starting from 7 down.
+
+#### Density
+```{r ploting density}
+qplot(density, data=wines,binwidth=0.0005)+
+  coord_cartesian(xlim=c(0.98,1.01))+
+  scale_x_continuous(breaks=seq(0.98,1.01,.005))
+
+
+summary(wines$density)
+
+```
+
+Density values are very compact and ranges most between 0.99 and 1
+
+#### pH
+```{r ploting Ph}
+qplot(pH, data=wines,binwidth=0.05)+
+  coord_cartesian(xlim=c(2.5,4))+
+  scale_x_continuous(breaks=seq(2.5,4,0.1))
+
+
+summary(wines$pH)
+
+```
+
+Most wines have pH between 3 and 3.4, with the median at 3.18
+
+#### Sulphates
+```{r ploting Sulphates}
+qplot(sulphates, data=wines,binwidth=.02,geom = "freqpoly")+
+  scale_x_continuous(breaks=seq(0.2,1.1,0.1))
+
+
+summary(wines$sulphates)
+
+```
+
+Most wines have sulphates between 0.35 and 0.6. The median is 0.47 and the mean 0.49
+
+#### Alcohol
+```{r ploting alcohol}
+alcohol.plot=qplot(alcohol, data=wines,binwidth=1,fill=I('blue')
+                   ,main="Distribution of alcohol in white wines")+
+  coord_cartesian(xlim=c(8,14.20))
+
+alcohol.plot
+
+
+summary(wines$alcohol)
+
+```
+
+We have few wines with alcohol rate between 8 and 9. The peak of frequency is betwhen 9 an 10. The frequency then decreases with alcohol growing up to 14.
+Most values are between 9 and 12.
+
+#### Quality
+```{r ploting quality}
+qplot(quality, data=wines, geom='bar')
+
+
+sort(table(wines$quality),decreasing=T)
+
+summary(wines$quality)
+
+
+```
+
+Wines quality ranges from 3 to 9. Most them are between 5, 6 and 7, the Median is 6.
+
+#### First take off
+
+Most of the variables(excepting residual sugar, alcohol and quality) seems to be normally distributed! What could be the relationships between them?
+
+### Examining the relationships between any two variables?
+
+#### Plotting all pairs
+
+First of all, let us get an overview of how any pair of variables can be related
+
+```{r plotting pairs}
+set.seed(2500)
+ggpairs(wines[sample.int(nrow(wines),1000),] ,axisLabels='none',
+        upper=list(params=list(size=3)),
+        lower=list(params=list(size=I(.5),alpha=I(.2))), 
+        columnLabels=c('FA','VA','CA','RS','CH','FS','TS',
+                       'DE','PH','SU','AL','QU'))
+
+```
+
+I will first go deeper in the plots that looks linear (Residual sugar vs Density, alcohol vs density). I am also interrested by looking deeper in some other relationships like fixed acidity vs residual sugar and citric acid vs residual sugar. I will end by exploring the relationships between quality and any other variable
+
+#### Density vs Residual sugar
+```{r Residual sugar vs Density}
+qplot(x=residual.sugar,y=density,
+      data=subset(wines,
+                  residual.sugar<quantile(wines$residual.sugar,.99) & 
+                    density<quantile(density,.99)), 
+      alpha=I(.2))+geom_smooth(method='lm')
+
+cor.test(wines$residual.sugar,wines$density)
+
+```
+
+Plotting them together and also computing the correlation shoes that density and residual sugar are highly correlated, they will not be used together if we produced a model. 
+
+#### Density vs Alcohol
+```{r Alcohol vs Density}
+qplot(x=alcohol,y=density,
+      data=subset(wines,alcohol<quantile(wines$alcohol,.99) &
+                    density<quantile(density,.99)), 
+      alpha=I(.2))+
+  geom_smooth(method='lm')
+
+cor.test(wines$alcohol,wines$density)
+
+```
+
+Again we can see a strong correlation between the two variables, even if our linear model is decreasing in this case. What about alcohol and residual sugar?
+
+#### Residual sugar vs Alcohol
+```{r Alcohol vs Residual sugar}
+qplot(x=alcohol,y=residual.sugar,
+      data=subset(wines,alcohol<quantile(wines$alcohol,.99) &
+                    residual.sugar<quantile(residual.sugar,.99)),
+      alpha=I(.2))+
+  geom_smooth(method='lm')
+
+cor.test(wines$alcohol,wines$residual.sugar)
+
+```
+
+Difficult to see any linear relationship between the two variables, although both are highly correlated to alcohol
+
+#### Fixed acidity vs Residual sugar 
+
+```{r Fixed acidity vs residual sugar}
+qplot(x=residual.sugar,y=fixed.acidity,
+      data=subset(wines,
+                  residual.sugar<quantile(wines$residual.sugar,.99) &
+                    fixed.acidity<quantile(fixed.acidity,.99)), 
+      alpha=I(.2))+
+  geom_smooth(method='lm')
+
+cor.test(wines$residual.sugar,wines$fixed.acidity)
+
+```
+
+The avreage fixed acidity value is almost the same for  different residual sugar values
+
+#### Residual sugar vs Citric acid 
+```{r Citric acid vs residual sugar}
+qplot(x=citric.acid,y=residual.sugar,
+      data=subset(wines,
+                  residual.sugar<quantile(wines$residual.sugar,.99) &
+                    citric.acid<quantile(citric.acid,.99)),
+      alpha=I(.2))
+```
+
+Again, difficult to see any relationship between the two variables
+
+
+Let us see how any of the attributes relates to wine quality
+
+#### Quality vs Fixed.acidity
+```{r}
+fixed.acidity.plot=qplot(x=fixed.acidity, y=quality,
+                         data=wines, alpha=I(.2))+
+  geom_smooth()
+
+fixed.acidity.plot
+```
+
+It might be difficult to see this just by looking at the scatter plot, but adding the smoothed conditional mean shows us that average quality tends to decrease when fixed acidity increases.
+
+Let us do a similar plots for quality and others attributes
+
+#### Quality vs other attributes
+```{r plotting quality vs other attributes,warning=FALSE}
+plots=list()
+nameList=names(wines)
+labelList=c('Fixed acidity','Volatile acidity','Citric acid',
+            'Residual sugar','Chlorides','Free sulfur dioxide',
+            'Total sulfur dioxide','Density',
+               'pH','Sulphates','Alcohol')
+len=length(labelList)
+# add a plot for each variable
+for ( i in 1:len){
+  name=nameList[i]
+  # exclude outliers from plots
+  quant=quantile(wines[,name],.99)  
+  plots[[i]]=ggplot(aes_string(x=name, y='quality'),
+                    data=wines[wines[,name]<=quant,])+
+    geom_point(alpha=I(.1),size=I(.2),color=I('orange'))+
+    geom_smooth()+
+    ylab("Quality")+
+    xlab(labelList[i])
+}
+#got this on stackovervlow
+quality.others.plot=do.call(arrangeGrob,c(plots,ncol=4,
+                            main="Quality vs other attributes"))
+quality.others.plot
+```
+
+Wine quality seems to increase with alcohool and pH, and decrease with fixed acidity, volatile acidity and density.It is more difficult to appreciate for other attributes. Let us see how it may relate to two or more of these variables.
+
+### Analyzing three or more variables
+
+#### Wine quality vs alcohol and fixed acidity
+
+```{r plotting quality vs alcohol and fixed acidity}
+qplot(x=alcohol,y=quality,color=fixed.acidity, 
+      data=subset(wines,alcohol<quantile(wines$alcohol,.99)&
+                    fixed.acidity<quantile(fixed.acidity,.99)),
+      geom='jitter')+
+  scale_color_gradientn(colours = 
+                          colorRampPalette(c("blue", "red"))(100))
+
+```
+
+Difficult to take anything from this heat map. Let us separate fixed acidity and volatile acidity into two buckets first and plot again
+
+```{r computing fixed acidity and volatile acidity buckets}
+#divide a vector in thwo buckets around the median
+cutInTwo=function(vector){
+  return(cut(vector,breaks=c(floor(min(vector)),median(vector),
+                             ceiling((max(vector))))))
+}
+
+wines$fixed.acidity.bucket=cutInTwo(wines$fixed.acidity)
+
+#other buckets to be used later in the analysis
+wines$volatile.acidity.bucket=cutInTwo(wines$volatile.acidity)
+
+wines$pH.bucket=cutInTwo(wines$pH)
+
+```
+
+
+```{r plotting quality vs alcohol and fixed acidity bucket}
+title="Quality vs alcohol and fixed acidity"
+quality.alcohol.fixed.acidity.plot=qplot(x=alcohol,y=quality,
+                                         color=fixed.acidity.bucket,
+                                         geom='jitter',
+                                         data=wines,xlab="Alcohol",
+                                         ylab="Quality",
+                                         main=title)+
+  scale_color_brewer(type='qual',palette=2,
+                     guide=guide_legend(title="Fixed acidity"))
+  
+  
+
+quality.alcohol.fixed.acidity.plot
+```
+
+Now you can see that for lower values of alcohool(alcohol< 10), better quality wines have higher fixed acidity whereas  better quality wines have lower  fixed acidity for wines with higher values of alcohol.
+
+
+```{r quality vs alcohol and  fixed acidity by volatile acidity}
+quality.alcohol.fixed.acidity.plot+
+  facet_wrap(~volatile.acidity.bucket)
+```
+
+The pattern observed on the previous plot seems to be kept for differents buckets of volatile acidity
+
+```{r quality vs alcohol by fixed acidity bucket}
+quality.alcohol.plot=qplot(x=alcohol, y=quality, data=wines,
+                           alpha=I(.2), color=I("Orange"),
+                           xlab='Alcohol',ylab="Quality")+
+  geom_smooth()
+
+quality.alcohol.by.fixed.acidity.plot=quality.alcohol.plot+
+  facet_wrap(~fixed.acidity.bucket)+
+  ggtitle("Quality vs alcohol by fixed acidity")
+
+
+quality.alcohol.by.fixed.acidity.plot
+```
+
+The increase of wine quality with alcohol seems more evident for lower values of fixed acidity than for higher ones
+
+
+#### Wine quality vs alcohol and volatile acidity
+
+```{r quality vs alcohol and volatile acidity}
+quality.alcohol.volatile.acidity.plot=
+  qplot(x=alcohol,y=quality,
+        color=volatile.acidity.bucket,
+        geom='jitter',data=wines)+
+  scale_color_brewer(type='qual',palette=2)
+
+quality.alcohol.volatile.acidity.plot
+```
+
+Holding alcohol constant, wines with lower volatile acidity seeems to have higher quality. This is more visible for wines with alcohol value lower than 12.
+
+```{r quality vs alcohol by volatile acidity bucket}
+quality.alcohol.by.volatile.acidity.plot=
+  quality.alcohol.plot+
+  facet_wrap(~volatile.acidity.bucket)+
+  ggtitle("Quality vs alcohol by volatile acidity")
+
+quality.alcohol.by.volatile.acidity.plot
+```
+
+The increase of wine quality with alcohol seems more evident for higher values of volatile acidity than for lower ones
+
+
+#### Wine quality vs density and fixed acidity
+
+```{r plotting quality vs density and fixed acidity bucket}
+quality.density.fixed.acidity.plot=
+  qplot(x=density,y=quality,
+       color=fixed.acidity.bucket,
+       geom='jitter',data=wines)+
+  scale_color_brewer(type='qual',palette=2)
+
+quality.density.fixed.acidity.plot
+```
+
+Let us remove outliers an plot again
+
+```{r computing the 99 quantile for density}
+wines.density.99=subset(wines,
+                        wines$density<quantile(wines$density,.99))
+```
+
+
+```{r plotting quality vs density whithout outliers and fixed acidity bucket}
+title="Quality vs density and fixed acidity"
+quality.density.fixed.acidity.plot=qplot(x=density,y=quality,
+                                         color=fixed.acidity.bucket,
+                                         geom='jitter',
+                                         data=wines.density.99,                                         
+                                         main=title)+
+  scale_color_brewer(type='qual',palette=2,
+                     guide=guide_legend(title="Fixed acidity"))
+
+quality.density.fixed.acidity.plot
+```
+
+
+For higher values of density, wines of better quality have higher fixed acidity. It is consistent with what we observed for alcohol since it is highly correlated with density but having a negative correlation coefficient.
+
+```{r quality vs density by fixed acidity bucket}
+quality.density.plot=qplot(x=density, y=quality,
+                           data=wines.density.99, alpha=I(.2))+
+  geom_smooth()
+
+quality.density.plot+
+  facet_wrap(~fixed.acidity.bucket)
+```
+
+The decrease of wine quality with density is visible for both higher and lower values of fixed acidity.
+
+#### Wine quality vs density and volatile acidity
+
+```{r quality vs density and volatile acidity}
+quality.density.volatile.acidity.plot=
+  qplot(x=density,y=quality,
+        color=volatile.acidity.bucket,
+        geom='jitter',data=wines.density.99)+
+  scale_color_brewer(type='qual',palette=2)
+
+quality.density.volatile.acidity.plot
+```
+
+For higher values of density, wines of better quality have lower volatile acidity.
+
+```{r quality vs density by volatile acidity bucket}
+quality.density.plot+
+  facet_wrap(~volatile.acidity.bucket)
+```
+
+For both higher and lower values of volatile acidity, wine quality globally decreases with density
+
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r Plot_One}
+alcohol.plot+
+  xlab("Alcohol")+
+  ylab("Number of wines")
+```
+
+### Description One
+
+We have few wines with alcohol rate between 8 and 9. The peak of frequency is betwhen 9 an 10. The frequency then decreases with alcohol growing up to 14. Most values are between 9 and 12.
+Alcohol is one of  the variables(with residual sugar and quality)that does not seem to be normally distributed
+
+### Plot Two
+```{r Plot_Two}
+title="Comparing the combined effect of alcohol or density with fixed
+             acidity on wine quality"
+grid.arrange(quality.alcohol.fixed.acidity.plot,
+             quality.density.fixed.acidity.plot,
+             ncol=1, main=title)
+```
+
+### Description Two
+
+Most of the wines of high quality and low alcohol, as well as those of high quality and high density are of high fixed acidity. This is consistant with the correlation between alcohol and density.
+
+### Plot Three
+```{r Plot_Three}
+grid.arrange(quality.alcohol.by.fixed.acidity.plot,
+             quality.alcohol.by.volatile.acidity.plot,ncol=1)
+```
+
+### Description Three
+
+The increase of wine quality with alcohol seems more evident for lower values of fixed acidity and higher values of volatile acidity.
+
+
+------
+
+# Reflection
+
+My exploration of the white whines data set revealed some interesting findings.The data is made of 4898 entries, each one having 11 chemical properties of a white wine and the quality, as the output attribute, graded by wine experts.All the attibutes ara numerical.
+
+After summarising the data, I went through individual attributes to understand their distributions and I found that most of them seemed to be normally distributed. Going through pair relationships, I found two pairs of highly correlated attritutes, namely "Density-Alchohol" and "Residual sugar-Alcohol". It may not be interesting to use them together when building a model.
+
+Plotting them against wine quality (with a smooth curve to help me see trends) I found that the output variable is mainly influenced (positively or negatively) by alcohol, pH, fixed acidity, volatile acidity, and density. I then went through some combinations of theses variables to undersdant how they relate to wine quality. Since they were all numerical, I first started with a heat map, but it appears difficult for me to have insight from that. I then transformed some of the variables by dividing them into two buckets around their medians and this helped me to gain more findings. 
+
+I unfortunately have not found any linear (or near linear) relationship between wine quality and any attribute, combination or transformation of attributes, so I preffered not to build a linear model for now. I thing that several model types should be considered and compared to have the best prediction of wine quality. Let me take the "Intro to Machine Learning" course before reworking on this!
